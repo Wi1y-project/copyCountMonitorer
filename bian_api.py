@@ -12,11 +12,9 @@ client = CMFutures(
 )
 
 params = {
-    'symbol': 'BTCUSDT',
-    'recvWindow': 5000,
     'timestamp': cm_futures_client.time()['serverTime']
 }
 
-open_orders = client.get_open_orders(**params)
+open_orders = client.account(params=params)
 
 print(open_orders)
