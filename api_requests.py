@@ -259,7 +259,7 @@ def get_deal(
                 return None
 
             logger.info(f"成功获取 portfolioId {portfolio_id} 的订单历史")
-            return result.get("data", {})['list'][0]
+            return result.get("data", {})['list']
 
         except requests.exceptions.HTTPError as http_err:
             if response.status_code in [429, 500, 502, 503, 504] and attempt < max_retries:
