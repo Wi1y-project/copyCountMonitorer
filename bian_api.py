@@ -296,7 +296,7 @@ def main():
     symbol = "NEIROUSDT"  # 示例交易对
 
     # 查询未平仓订单
-    open_orders = get_open_orders(api_key, secret, symbol)
+    open_orders = get_open_orders(api_key, secret)
     print("未平仓订单:")
     print(json.dumps(open_orders, indent=2, ensure_ascii=False))
 
