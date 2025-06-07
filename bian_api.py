@@ -216,8 +216,8 @@ def main():
 
     # 示例：下市价买入订单
     buy_order = place_buy_order(
-        api_key=key[0],
-        api_secret=secret[0],
+        api_key=key,
+        api_secret=secret,
         symbol=symbol,
         quantity=0.01,  # 示例数量
         position_side="LONG",  # 持仓方向，LONG 或 SHORT
