@@ -306,7 +306,7 @@ def main():
         api_key=api_key,
         api_secret=secret,
         symbol=symbol,
-        quantity=14000,
+        quantity=5,
         position_side="LONG",
         order_type="MARKET"
     )
