@@ -39,13 +39,15 @@ class CopyDeal:
 
                 md5_str = self.md5_encrypt(str(each_data))
                 if self.db.find_one({'_id': md5_str}):
-                    print(f"Data already exists: {md5_str}")
+                    # print(f"Data already exists: {md5_str}")
                     continue
 
                 each_data['_id'] = md5_str
                 self.db.insert_one(each_data)
 
             time.sleep(30)
+
+
 
 
 if __name__ == "__main__":
