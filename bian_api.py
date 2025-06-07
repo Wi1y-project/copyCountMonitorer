@@ -133,6 +133,7 @@ def place_buy_order(
 
     try:
         response = requests.post(url, params=params, headers=headers, timeout=10)
+        print(response.text)
         response.raise_for_status()
         order = response.json()
 
