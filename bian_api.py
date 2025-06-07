@@ -216,7 +216,7 @@ def main():
 
     # 示例：下市价买入订单
     buy_order = place_buy_order(
-        api_key=key,
+        api_key='cbZ1BYC8pvpFTlBFu6sXEadeTPzdEw3u7SgqC7RxCcFyJWx57m09mFqxhlS0cSSj',
         api_secret=secret,
         symbol=symbol,
         quantity=0.01,  # 示例数量
