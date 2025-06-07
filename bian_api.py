@@ -234,9 +234,9 @@ def place_buy_order(
         return {}
 
     # 设置保证金模式
-    if not set_margin_type(api_key, api_secret, symbol, margin_type):
-        logger.error("无法设置保证金模式，下单取消")
-        return {}
+    # if not set_margin_type(api_key, api_secret, symbol, margin_type):
+    #     logger.error("无法设置保证金模式，下单取消")
+    #     return {}
 
     # 设置杠杆
     if not set_leverage(api_key, api_secret, symbol, leverage):
