@@ -208,12 +208,11 @@ def main():
     # 替换为你的 API 密钥和私钥
     key = 'cbZ1BYC8pvpFTlBFu6sXEadeTPzdEw3u7SgqC7RxCcFyJWx57m09mFqxhlS0cSSj',
     secret = 'w2le7dkibjAQ4i1RgKUOqk0lAIDALzGoayU827yLJE150iliAsnC5CMpQHUdDAG3'
-    api_key = key
-    api_secret = secret
+
     symbol = "BTCUSDT"  # 示例交易对
 
     # 查询未平仓订单
-    open_orders = get_open_orders(api_key, api_secret, symbol)
+    open_orders = get_open_orders(key[0], secret[0])
     print("未平仓订单:")
     print(json.dumps(open_orders, indent=2, ensure_ascii=False))
 
