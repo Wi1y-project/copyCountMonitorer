@@ -58,11 +58,19 @@ class CopyDeal:
 
     def get_data_insert(self):
 
+        retry_count = 0
         while True:
 
             data = get_deal(self.search_id)
             if not data:
                 print("获取带单人数据失败 No data found, retrying...")
+                retry_count += 1
+
+                if retry_count >= 5:
+                    dd_sender("获取带单人数据失败，连续5次未获取到数据，请检查网络或API状态。")
+                    logging.error("获取带单人数据失败，连续5次未获取到数据，请检查网络或API状态。")
+                    break
+
                 time.sleep(5)
                 continue
 
