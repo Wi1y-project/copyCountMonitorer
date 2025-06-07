@@ -83,6 +83,7 @@ def place_buy_order(
         api_secret: str,
         symbol: str,
         quantity: float,
+        position_side: str,
         order_type: str = "MARKET",
         price: float = None
 ) -> Dict[str, Any]:
@@ -107,6 +108,7 @@ def place_buy_order(
     params = {
         'symbol': symbol,
         'side': 'BUY',
+        'positionSide': position_side,  # 持仓方向
         'type': order_type,
         'quantity': quantity,
         'timestamp': timestamp,
@@ -209,12 +211,20 @@ def main():
     key = 'cbZ1BYC8pvpFTlBFu6sXEadeTPzdEw3u7SgqC7RxCcFyJWx57m09mFqxhlS0cSSj',
     secret = 'w2le7dkibjAQ4i1RgKUOqk0lAIDALzGoayU827yLJE150iliAsnC5CMpQHUdDAG3'
 
-    symbol = "BTCUSDT"  # 示例交易对
+    symbol = "NEIROUSDT"  # 示例交易对
 
-    # 查询未平仓订单
-    open_orders = get_open_orders(key[0], secret[0])
-    print("未平仓订单:")
-    print(json.dumps(open_orders, indent=2, ensure_ascii=False))
+    # 示例：下市价买入订单
+    buy_order = place_buy_order(
+        api_key=key[0],
+        api_secret=secret[0],
+        symbol=symbol,
+        quantity=0.01,  # 示例数量
+        position_side="LONG",  # 持仓方向，LONG 或 SHORT
+        # price=0.0004210,  # 市价单不需要价格
+        order_type="MARKET"
+    )
+    print("\n买入订单结果:")
+    print(json.dumps(buy_order, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
