@@ -99,6 +99,7 @@ def get_open_orders(api_key: str, api_secret: str, symbol: str = None) -> List[D
 
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)
+        print(response.json())
         response.raise_for_status()
         orders = response.json()
 
