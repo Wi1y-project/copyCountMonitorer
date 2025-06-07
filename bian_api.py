@@ -67,6 +67,96 @@ def get_symbol_info(symbol: str) -> Dict[str, Any]:
         return {}
 
 
+def set_margin_type(api_key: str, api_secret: str, symbol: str, margin_type: str = "ISOLATED") -> bool:
+    """
+    设置交易对的保证金模式（全仓或逐仓）。
+
+    Args:
+        api_key (str): Binance API 密钥
+        api_secret (str): Binance API 私钥
+        symbol (str): 交易对，例如 "BTCUSDT"
+        margin_type (str): 保证金模式，"ISOLATED" 或 "CROSSED"，默认 "ISOLATED"
+
+    Returns:
+        bool: 设置成功返回 True，失败返回 False
+    """
+    if margin_type not in ["ISOLATED", "CROSSED"]:
+        logger.error("margin_type 必须为 ISOLATED 或 CROSSED")
+        return False
+
+    url = "https://fapi.binance.com/fapi/v1/marginType"
+    timestamp = int(time.time() * 1000)
+
+    params = {
+        'symbol': symbol,
+        'marginType': margin_type,
+        'timestamp': timestamp,
+        'recvWindow': 5000
+    }
+
+    query_string = urllib.parse.urlencode(params, safe='')
+    params['signature'] = generate_signature(query_string, "", api_secret)
+
+    headers = {
+        'X-MBX-APIKEY': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        logger.info(f"成功设置 {symbol} 的保证金模式为 {margin_type}")
+        return True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"设置保证金模式失败: {e}")
+        if response.text:
+            logger.error(f"响应内容: {response.text}")
+        return False
+
+
+def set_leverage(api_key: str, api_secret: str, symbol: str, leverage: int = 20) -> bool:
+    """
+    设置交易对的杠杆倍数。
+
+    Args:
+        api_key (str): Binance API 密钥
+        api_secret (str): Binance API 私钥
+        symbol (str): 交易对，例如 "BTCUSDT"
+        leverage (int): 杠杆倍数，例如 20
+
+    Returns:
+        bool: 设置成功返回 True，失败返回 False
+    """
+    url = "https://fapi.binance.com/fapi/v1/leverage"
+    timestamp = int(time.time() * 1000)
+
+    params = {
+        'symbol': symbol,
+        'leverage': leverage,
+        'timestamp': timestamp,
+        'recvWindow': 5000
+    }
+
+    query_string = urllib.parse.urlencode(params, safe='')
+    params['signature'] = generate_signature(query_string, "", api_secret)
+
+    headers = {
+        'X-MBX-APIKEY': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        logger.info(f"成功设置 {symbol} 的杠杆为 {leverage}x")
+        return True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"设置杠杆失败: {e}")
+        if response.text:
+            logger.error(f"响应内容: {response.text}")
+        return False
+
+
 def get_open_orders(api_key: str, api_secret: str, symbol: str = None) -> List[Dict[str, Any]]:
     """
     查询 U 本位合约账户的当前未平仓订单。
@@ -99,7 +189,6 @@ def get_open_orders(api_key: str, api_secret: str, symbol: str = None) -> List[D
 
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)
-        print(response.json())
         response.raise_for_status()
         orders = response.json()
 
@@ -119,10 +208,12 @@ def place_buy_order(
         quantity: float,
         position_side: str = "LONG",
         order_type: str = "MARKET",
-        price: float = None
+        price: float = None,
+        margin_type: str = "ISOLATED",
+        leverage: int = 20
 ) -> Dict[str, Any]:
     """
-    下 U 本位合约买入订单（可指定做多或平空）。
+    下 U 本位合约买入订单（可指定做多或平空、全仓或逐仓、杠杆倍数）。
 
     Args:
         api_key (str): Binance API 密钥
@@ -132,12 +223,24 @@ def place_buy_order(
         position_side (str): 仓位方向，"LONG"（做多）或 "SHORT"（平空），默认 "LONG"
         order_type (str): 订单类型，默认 "MARKET"，可选 "LIMIT"
         price (float, optional): 限价单价格，仅限价单需要
+        margin_type (str): 保证金模式，"ISOLATED" 或 "CROSSED"，默认 "ISOLATED"
+        leverage (int): 杠杆倍数，默认 20
 
     Returns:
         dict: 订单响应数据，若失败返回空字典
     """
     if position_side not in ["LONG", "SHORT"]:
         logger.error("position_side 必须为 LONG 或 SHORT")
+        return {}
+
+    # 设置保证金模式
+    if not set_margin_type(api_key, api_secret, symbol, margin_type):
+        logger.error("无法设置保证金模式，下单取消")
+        return {}
+
+    # 设置杠杆
+    if not set_leverage(api_key, api_secret, symbol, leverage):
+        logger.error("无法设置杠杆，下单取消")
         return {}
 
     # 获取交易对精度规则
@@ -150,7 +253,6 @@ def place_buy_order(
     min_qty = symbol_info['minQty']
     step_size = symbol_info['stepSize']
 
-    # 格式化 quantity
     quantity = round(quantity, precision)
     if quantity < min_qty:
         logger.error(f"数量 {quantity} 小于最小交易量 {min_qty}")
@@ -191,7 +293,7 @@ def place_buy_order(
         response.raise_for_status()
         order = response.json()
 
-        logger.info(f"成功下买入订单（{position_side}）：{order.get('orderId')}")
+        logger.info(f"成功下买入订单（{position_side}, {margin_type}, {leverage}x）：{order.get('orderId')}")
         return order
     except requests.exceptions.RequestException as e:
         logger.error(f"下买入订单失败: {e}")
@@ -207,10 +309,12 @@ def place_sell_order(
         quantity: float,
         position_side: str = "SHORT",
         order_type: str = "MARKET",
-        price: float = None
+        price: float = None,
+        margin_type: str = "ISOLATED",
+        leverage: int = 20
 ) -> Dict[str, Any]:
     """
-    下 U 本位合约卖出订单（可指定做空或平多）。
+    下 U 本位合约卖出订单（可指定做空或平多、全仓或逐仓、杠杆倍数）。
 
     Args:
         api_key (str): Binance API 密钥
@@ -220,12 +324,24 @@ def place_sell_order(
         position_side (str): 仓位方向，"SHORT"（做空）或 "LONG"（平多），默认 "SHORT"
         order_type (str): 订单类型，默认 "MARKET"，可选 "LIMIT"
         price (float, optional): 限价单价格，仅限价单需要
+        margin_type (str): 保证金模式，"ISOLATED" 或 "CROSSED"，默认 "ISOLATED"
+        leverage (int): 杠杆倍数，默认 20
 
     Returns:
         dict: 订单响应数据，若失败返回空字典
     """
     if position_side not in ["LONG", "SHORT"]:
         logger.error("position_side 必须为 LONG 或 SHORT")
+        return {}
+
+    # 设置保证金模式
+    if not set_margin_type(api_key, api_secret, symbol, margin_type):
+        logger.error("无法设置保证金模式，下单取消")
+        return {}
+
+    # 设置杠杆
+    if not set_leverage(api_key, api_secret, symbol, leverage):
+        logger.error("无法设置杠杆，下单取消")
         return {}
 
     # 获取交易对精度规则
@@ -238,7 +354,6 @@ def place_sell_order(
     min_qty = symbol_info['minQty']
     step_size = symbol_info['stepSize']
 
-    # 格式化 quantity
     quantity = round(quantity, precision)
     if quantity < min_qty:
         logger.error(f"数量 {quantity} 小于最小交易量 {min_qty}")
@@ -279,7 +394,7 @@ def place_sell_order(
         response.raise_for_status()
         order = response.json()
 
-        logger.info(f"成功下卖出订单（{position_side}）：{order.get('orderId')}")
+        logger.info(f"成功下卖出订单（{position_side}, {margin_type}, {leverage}x）：{order.get('orderId')}")
         return order
     except requests.exceptions.RequestException as e:
         logger.error(f"下卖出订单失败: {e}")
@@ -291,27 +406,28 @@ def place_sell_order(
 def main():
     # 替换为你的 API 密钥和私钥
     api_key = "cbZ1BYC8pvpFTlBFu6sXEadeTPzdEw3u7SgqC7RxCcFyJWx57m09mFqxhlS0cSSj"
-    api_secret = "你的API私钥"  # 替换为实际私钥
-    key = 'cbZ1BYC8pvpFTlBFu6sXEadeTPzdEw3u7SgqC7RxCcFyJWx57m09mFqxhlS0cSSj',
-    secret = 'w2le7dkibjAQ4i1RgKUOqk0lAIDALzGoayU827yLJE150iliAsnC5CMpQHUdDAG3'
+    api_secret = "w2le7dkibjAQ4i1RgKUOqk0lAIDALzGoayU827yLJE150iliAsnC5CMpQHUdDAG3"  # 替换为实际私钥
     symbol = "NEIROUSDT"  # 示例交易对
 
     # 查询未平仓订单
-    open_orders = get_open_orders(api_key, secret)
+    open_orders = get_open_orders(api_key, api_secret, symbol)
     print("未平仓订单:")
     print(json.dumps(open_orders, indent=2, ensure_ascii=False))
 
-    # 示例：下市价买入订单（做多）
+    # 示例：下市价买入订单（做多，逐仓，20x杠杆）
     buy_long_order = place_buy_order(
         api_key=api_key,
-        api_secret=secret,
+        api_secret=api_secret,
         symbol=symbol,
         quantity=15000,
         position_side="LONG",
-        order_type="MARKET"
+        order_type="MARKET",
+        margin_type="ISOLATED", # CROSSED
+        leverage=20
     )
-    print("\n买入订单（做多）结果:")
+    print("\n买入订单（做多，逐仓，20x）结果:")
     print(json.dumps(buy_long_order, indent=2, ensure_ascii=False))
+
 
 
 if __name__ == "__main__":
